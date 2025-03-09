@@ -1,15 +1,21 @@
 use std::io;
 
-use tun_tap::{ Iface, Mode };
+use nust::IPPacket;
+use tun_tap::{Iface, Mode};
 
 const INTERFACE_NAME: &str = "tun0";
 
-fn main() -> io::Result<()>  {
+fn main() -> io::Result<()> {
     let iface = Iface::new(INTERFACE_NAME, Mode::Tun)?;
-    // Configure the device ‒ set IP address on it, bring it up.
-    let mut buf = vec![0; 1504]; // MTU + 4 for the header
-    loop{
-        iface.recv(&mut buf)?; // Wait until a packet arrives
-        println!("{:?}", buf);
+    let mut buf = vec![0u8; 1504]; // MTU + 4 for the header
+    loop {
+        let bytes_copied_to_buffer = iface.recv(&mut buf)?; // Wait until a packet arrives
+        let protocol = u16::from_be_bytes([buf[2], buf[3]]);
+        if protocol == 0x0800 {
+            let ip_packet = IPPacket::new(&buf[4..bytes_copied_to_buffer]);
+            println!("{:x?}", ip_packet.header.protocol);
+        } else {
+            println!("Not a ipv4 packet to parse")
+        }
     }
 }
