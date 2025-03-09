@@ -1,0 +1,24 @@
+{
+  "editor.inlayHints.enabled": "offUnlessPressed",
+  "rust-analyzer.lens.enable": true,
+  "rust-analyzer.lens.run.enable": false,
+  "rust-analyzer.lens.debug.enable": false,
+  "[rust]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  // "rust-analyzer.linkedProjects": [
+  //   "./Cargo.toml"
+  // ],
+  // "rust-analyzer.cargo.features": ["debug"],
+  "markdownlint.config": {
+    "MD007": { "indent": 2 },
+    "MD024": false,
+    "MD025": false,
+    "MD033": false
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "yzhang.markdown-all-in-one",
+    "files.trimTrailingWhitespace": false
+  }
+}
