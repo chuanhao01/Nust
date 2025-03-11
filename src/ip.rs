@@ -8,7 +8,7 @@ impl IPPacket {
     pub fn new(buf: &[u8]) -> Self {
         let ihl = IPHeader::get_ihl(buf[0]);
         Self {
-            header: IPHeader::new(&buf[..(ihl * 4) as usize]),
+            header: IPHeader::from_byte_buffer(&buf[..(ihl * 4) as usize]),
         }
     }
 }
@@ -31,7 +31,7 @@ pub struct IPHeader {
 }
 
 impl IPHeader {
-    pub fn new(buf: &[u8]) -> Self {
+    pub fn from_byte_buffer(buf: &[u8]) -> Self {
         let ihl = Self::get_ihl(buf[0]);
         let options = if ihl == 5 {
             None
@@ -54,6 +54,11 @@ impl IPHeader {
             options,
         }
     }
+
+    fn calculate_checksum(&self) -> u16 {}
+    /// Creates the byte buffer using the values in the header
+    fn to_byte_buffer(&self) -> [u8] {}
+
     fn get_version(x: u8) -> u8 {
         // Extracts from the first byte
         x >> 4
