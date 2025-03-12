@@ -39,13 +39,14 @@ pub struct IPHeader {
     pub fragment_offset: u16, // 13 bits
     pub time_to_live: u8,
     pub protocol: u8,
-    pub header_checksum: u16,
+    pub checksum: u16,
     pub source_addr: Ipv4Addr,
     pub destination_addr: Ipv4Addr,
     pub options: Option<Vec<u8>>,
 }
 impl IPHeader {
-    /// To create a new IPHeader given fields, calculates and sets the header_checksum for you
+    /// To create a new IPHeader given fields, calculates and sets the checksum for you
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         version: u8, // 4 bits
         ihl: u8,     // 4 bits
@@ -70,14 +71,14 @@ impl IPHeader {
             fragment_offset,
             time_to_live,
             protocol,
-            header_checksum: 0x0,
+            checksum: 0x0,
             source_addr,
             destination_addr,
             options,
         };
         let header_checksum =
             !checksum::ones_complement_sum_byte_buffer(&ip_header.to_byte_buffer()); // Taking the one's complement
-        ip_header.header_checksum = header_checksum;
+        ip_header.checksum = header_checksum;
         ip_header
     }
     /// Parsing from raw bytes buffer
@@ -101,7 +102,7 @@ impl IPHeader {
             fragment_offset: Self::get_fragment_offset([buf[6], buf[7]]),
             time_to_live: buf[8],
             protocol: buf[9],
-            header_checksum: u16::from_be_bytes([buf[10], buf[11]]),
+            checksum: u16::from_be_bytes([buf[10], buf[11]]),
             source_addr: Ipv4Addr::new(buf[12], buf[13], buf[14], buf[15]),
             destination_addr: Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]),
             options,
@@ -116,7 +117,7 @@ impl IPHeader {
         buf.push((self.fragment_offset & 0xFF) as u8);
         buf.push(self.time_to_live);
         buf.push(self.protocol);
-        buf.append(&mut self.header_checksum.to_be_bytes().to_vec());
+        buf.append(&mut self.checksum.to_be_bytes().to_vec());
         buf.append(&mut self.source_addr.to_bits().to_be_bytes().to_vec());
         buf.append(&mut self.destination_addr.to_bits().to_be_bytes().to_vec());
         if let Some(options) = &self.options {
@@ -165,7 +166,7 @@ mod tests {
             assert_eq!(ip_header.fragment_offset, 0x0);
             assert_eq!(ip_header.time_to_live, 0x40);
             assert_eq!(ip_header.protocol, 0x1);
-            assert_eq!(ip_header.header_checksum, 0x9e4a);
+            assert_eq!(ip_header.checksum, 0x9e4a);
             assert_eq!(ip_header.source_addr, Ipv4Addr::from_bits(0xc0a80001));
             assert_eq!(ip_header.destination_addr, Ipv4Addr::from_bits(0xc0a80002));
             assert!(ip_header.options.is_none());
@@ -185,7 +186,7 @@ mod tests {
                 ip_header.destination_addr,
                 ip_header.options,
             );
-            assert_eq!(new_ip_header.header_checksum, ip_header.header_checksum);
+            assert_eq!(new_ip_header.checksum, ip_header.checksum);
         }
     }
 }
