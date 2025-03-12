@@ -3,16 +3,24 @@ use std::net::Ipv4Addr;
 pub struct IPPacket {
     pub header: IPHeader,
 }
-
 impl IPPacket {
-    pub fn new(buf: &[u8]) -> Self {
+    pub fn new(buf: &[u8]) -> Result<Self, IPPacketError> {
         let ihl = IPHeader::get_ihl(buf[0]);
-        Self {
-            header: IPHeader::from_byte_buffer(&buf[..(ihl * 4) as usize]),
-        }
+        Ok(Self {
+            header: IPHeader::from_byte_buffer(&buf[..(ihl * 4) as usize])?,
+        })
     }
 }
+#[derive(Debug)]
+pub struct IPPacketError {
+    kind: IPPacketErrorKind,
+}
+#[derive(Debug)]
+pub enum IPPacketErrorKind {
+    IPHeaderChecksumError,
+}
 
+#[derive(Debug)]
 pub struct IPHeader {
     pub version: u8, // 4 bits
     // Internet Header Length
@@ -29,16 +37,15 @@ pub struct IPHeader {
     pub destination_addr: Ipv4Addr,
     pub options: Option<Vec<u8>>,
 }
-
 impl IPHeader {
-    pub fn from_byte_buffer(buf: &[u8]) -> Self {
+    pub fn from_byte_buffer(buf: &[u8]) -> Result<Self, IPPacketError> {
         let ihl = Self::get_ihl(buf[0]);
         let options = if ihl == 5 {
             None
         } else {
             Some(buf[20..].to_vec())
         };
-        Self {
+        Ok(Self {
             version: Self::get_version(buf[0]),
             ihl,
             type_of_service: buf[1],
@@ -52,12 +59,12 @@ impl IPHeader {
             source_addr: Ipv4Addr::new(buf[12], buf[13], buf[14], buf[15]),
             destination_addr: Ipv4Addr::new(buf[16], buf[17], buf[18], buf[19]),
             options,
-        }
+        })
     }
-
-    fn calculate_checksum(&self) -> u16 {}
     /// Creates the byte buffer using the values in the header
-    fn to_byte_buffer(&self) -> [u8] {}
+    fn to_byte_buffer(&self) -> Vec<u8> {
+        [((self.version << 4) + self.ihl)].to_vec()
+    }
 
     fn get_version(x: u8) -> u8 {
         // Extracts from the first byte
@@ -74,5 +81,23 @@ impl IPHeader {
         let mut x = x;
         x[0] &= 0b00011111;
         u16::from_be_bytes(x)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod ipheader_tests {
+        use super::*;
+        #[test]
+        fn from_correct_ping_packet_fields() {
+            let buf: [u8; 20] = [
+                0x45, 0x0, 0x0, 0x54, 0x1b, 0xb, 0x40, 0x0, 0x40, 0x1, 0x9e, 0x4a, 0xc0, 0xa8, 0x0,
+                0x1, 0xc0, 0xa8, 0x0, 0x2,
+            ];
+            let ip_header = IPHeader::from_byte_buffer(&buf).unwrap();
+            assert_eq!(ip_header.version, 0x4);
+        }
     }
 }
