@@ -1,3 +1,5 @@
+use crate::ip::{IPPacketError, IPPacketErrorKind};
+
 pub struct ICMP {
     _type: ICMPType,
     code: u8,
@@ -13,7 +15,9 @@ pub struct ICMP {
     pointer: Option<u8>,
 }
 impl ICMP {
-    // pub fn from_byte_buffer()
+    pub fn from_byte_buffer(buf: &[u8]) -> Result<Self, IPPacketError> {
+        return Err(IPPacketError::new(IPPacketErrorKind::IPICMPError));
+    }
 }
 
 pub enum ICMPType {
@@ -44,5 +48,8 @@ impl ICMPType {
             Self::InformationRequest => 15,
             Self::InformationReply => 15,
         }
+    }
+    pub fn from_byte(x: u8) -> Self {
+        match x {}
     }
 }

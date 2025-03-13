@@ -1,3 +1,7 @@
 pub mod icmp;
 
-pub enum Protocol {}
+pub use icmp::ICMP;
+
+pub enum Protocol {
+    ICMP(ICMP),
+}

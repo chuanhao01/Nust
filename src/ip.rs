@@ -25,6 +25,7 @@ impl IPPacketError {
 #[derive(Debug)]
 pub enum IPPacketErrorKind {
     IPHeaderChecksumError,
+    IPICMPError,
 }
 
 #[derive(Debug)]
