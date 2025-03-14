@@ -1,16 +1,26 @@
-use std::net::Ipv4Addr;
+use core::time;
+use std::{net::Ipv4Addr, option};
 
-use crate::checksum;
+use crate::{checksum, protocol::IPBody};
 
 pub struct IPPacket {
     pub header: IPHeader,
+    pub body: IPBody,
 }
 impl IPPacket {
-    pub fn new(buf: &[u8]) -> Result<Self, IPPacketError> {
+    pub fn new(header: IPHeader, body: IPBody) -> Self {
+        Self { header, body }
+    }
+    pub fn from_byte_buffer(buf: &[u8]) -> Result<Self, IPPacketError> {
         let ihl = IPHeader::get_ihl(buf[0]);
-        Ok(Self {
-            header: IPHeader::from_byte_buffer(&buf[..(ihl * 4) as usize])?,
-        })
+        let header = IPHeader::from_byte_buffer(&buf[..(ihl * 4) as usize])?;
+        let body = IPBody::from_byte_buffer(header.protocol, &buf[(ihl * 4) as usize..])?;
+        Ok(Self { header, body })
+    }
+    pub fn to_byte_buffer(&self) -> Vec<u8> {
+        let mut buf = self.header.to_byte_buffer();
+        buf.append(&mut self.body.to_byte_buffer());
+        buf
     }
 }
 #[derive(Debug)]
@@ -25,7 +35,9 @@ impl IPPacketError {
 #[derive(Debug)]
 pub enum IPPacketErrorKind {
     IPHeaderChecksumError,
+    ICMPChecksumError,
     IPICMPError,
+    NotImplementedYet,
 }
 
 #[derive(Debug)]
@@ -82,6 +94,40 @@ impl IPHeader {
         ip_header.checksum = header_checksum;
         ip_header
     }
+    pub fn from_body(
+        version: u8, // 4 bits
+        type_of_service: u8,
+        identification: u16,
+        flags: u8,            // 3 bits
+        fragment_offset: u16, // 13 bits
+        time_to_live: u8,
+        protocol: u8,
+        source_addr: Ipv4Addr,
+        destination_addr: Ipv4Addr,
+        options: Option<Vec<u8>>,
+        body_length: u16,
+    ) -> Self {
+        let ihl: u8 = if let Some(option) = &options {
+            5 + (option.len() as u8 + 4 - option.len() as u8 % 4) / 4
+        } else {
+            5
+        };
+        let total_length: u16 = ihl as u16 * 4 + body_length;
+        Self::new(
+            version,
+            ihl,
+            type_of_service,
+            total_length,
+            identification,
+            flags,
+            fragment_offset,
+            time_to_live,
+            protocol,
+            source_addr,
+            destination_addr,
+            options,
+        )
+    }
     /// Parsing from raw bytes buffer
     pub fn from_byte_buffer(buf: &[u8]) -> Result<Self, IPPacketError> {
         let ihl = Self::get_ihl(buf[0]);
@@ -123,6 +169,9 @@ impl IPHeader {
         buf.append(&mut self.destination_addr.to_bits().to_be_bytes().to_vec());
         if let Some(options) = &self.options {
             buf.append(&mut options.clone());
+            if options.len() % 4 != 0 {
+                buf.append(&mut vec![0x0; 4 - options.len() % 4]);
+            }
         }
         buf
     }
