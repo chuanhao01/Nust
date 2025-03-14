@@ -238,5 +238,42 @@ mod tests {
             );
             assert_eq!(new_ip_header.checksum, ip_header.checksum);
         }
+
+        #[test]
+        fn correct_len_with_options() {
+            let ip_header = IPHeader::from_body(
+                0x4,
+                0x0,
+                0x54,
+                0b010,
+                0x0,
+                0x40,
+                0x1,
+                Ipv4Addr::from_bits(0xc0a80001),
+                Ipv4Addr::from_bits(0xc0a80002),
+                Some(vec![0x5]),
+                10,
+            );
+            assert_eq!(ip_header.ihl, 6);
+            assert_eq!(ip_header.total_length, 34);
+            assert_eq!(ip_header.to_byte_buffer()[20..24], [0x5, 0x0, 0x0, 0x0]);
+
+            let ip_header = IPHeader::from_body(
+                0x4,
+                0x0,
+                0x54,
+                0b010,
+                0x0,
+                0x40,
+                0x1,
+                Ipv4Addr::from_bits(0xc0a80001),
+                Ipv4Addr::from_bits(0xc0a80002),
+                Some(vec![0x5, 0x5, 0x5]),
+                10,
+            );
+            assert_eq!(ip_header.ihl, 6);
+            assert_eq!(ip_header.total_length, 34);
+            assert_eq!(ip_header.to_byte_buffer()[20..24], [0x5, 0x5, 0x5, 0x0]);
+        }
     }
 }

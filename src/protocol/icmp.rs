@@ -159,11 +159,11 @@ mod tests {
             ],
         };
         let icmp = ICMP::new(0x0, 0x0, icmp_body);
-        assert_eq!(icmp.checksum, 0x0);
+        assert_eq!(icmp.checksum, 0xc866);
     }
 
     mod icmp_body_tests {
-        use crate::protocol::icmp::{self, ICMPBody};
+        use crate::protocol::icmp::ICMPBody;
 
         #[test]
         fn from_byte_buffer_echo() {
