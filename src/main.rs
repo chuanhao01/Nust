@@ -21,6 +21,7 @@ fn main() -> io::Result<()> {
                 println!("{:#x}", ip_packet.header.protocol);
                 let header = ip_packet.header;
                 let body = ip_packet.body;
+                #[allow(clippy::single_match)]
                 match &body {
                     IPBody::ICMP(icmp) => match &icmp.body {
                         ICMPBody::Echo {

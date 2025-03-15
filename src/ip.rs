@@ -36,7 +36,7 @@ impl IPPacketError {
 pub enum IPPacketErrorKind {
     IPHeaderChecksumError,
     ICMPChecksumError,
-    IPICMPError,
+    TCPChecksumError,
     NotImplementedYet,
 }
 
