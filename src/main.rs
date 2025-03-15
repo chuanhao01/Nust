@@ -2,7 +2,7 @@ use std::io;
 
 use nust::{
     ip::IPHeader,
-    protocol::{icmp::ICMPBody, IPBody, ICMP},
+    protocol::{ICMPBody, IPBody, TCPControlBits, ICMP, TCP},
     IPPacket,
 };
 use tun_tap::{Iface, Mode};
@@ -22,7 +22,7 @@ fn main() -> io::Result<()> {
                 let header = ip_packet.header;
                 let body = ip_packet.body;
                 #[allow(clippy::single_match)]
-                match &body {
+                let reply_ip_packet = match &body {
                     IPBody::ICMP(icmp) => match &icmp.body {
                         ICMPBody::Echo {
                             identifier: _,
@@ -42,19 +42,63 @@ fn main() -> io::Result<()> {
                                 header.destination_addr,
                                 header.source_addr,
                                 header.options,
-                                icmp.len() as u16,
+                                ip_body.len() as u16,
                             );
-                            let res_ip_packet = IPPacket::new(ip_header, ip_body);
-                            let mut res_buf: Vec<u8> = vec![0x0, 0x0, 0x8, 0x0];
-                            res_buf.append(&mut res_ip_packet.to_byte_buffer());
-                            println!("ICMP Response Packet: {:x?}", res_buf);
-                            iface.send(&res_buf)?;
+                            Some(IPPacket::new(ip_header, ip_body))
                         }
-                        _ => {}
+                        _ => None,
+                    },
+                    IPBody::TCP(tcp) => match &tcp.control_bits {
+                        // SYN
+                        0b10 => {
+                            // Need to SYN ACK the request
+                            let ip_body = IPBody::TCP(TCP::new(
+                                &header.destination_addr,
+                                &header.source_addr,
+                                header.protocol,
+                                header.ihl,
+                                tcp.destination_port,
+                                tcp.source_port,
+                                0,
+                                tcp.sequence_number + 1,
+                                0,
+                                TCPControlBits::SYN.to_u8() + TCPControlBits::ACK.to_u8(),
+                                tcp.window,
+                                0,
+                                tcp.options.clone(),
+                                Vec::new(),
+                            ));
+                            let ip_header = IPHeader::from_body(
+                                header.version,
+                                header.type_of_service,
+                                header.identification,
+                                header.flags,
+                                header.fragment_offset,
+                                header.time_to_live,
+                                header.protocol,
+                                header.destination_addr,
+                                header.source_addr,
+                                header.options,
+                                ip_body.len() as u16,
+                            );
+                            Some(IPPacket::new(ip_header, ip_body))
+                        }
+                        _ => {
+                            // Not implemented yet, so ignore the request
+                            None
+                        }
                     },
                     _ => {
                         // Ignore anything we don't want to handle
+                        None
                     }
+                };
+                if let Some(reply_ip_packet) = reply_ip_packet {
+                    let mut res_buf: Vec<u8> = vec![0x0, 0x0, 0x8, 0x0];
+                    res_buf.append(&mut reply_ip_packet.to_byte_buffer());
+                    println!("original: {:x?}", &buf[4..]);
+                    println!("reply: {:x?}", res_buf);
+                    iface.send(&res_buf)?;
                 }
             };
         } else {

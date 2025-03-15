@@ -14,7 +14,7 @@ impl IPPacket {
     pub fn from_byte_buffer(buf: &[u8]) -> Result<Self, IPPacketError> {
         let ihl = IPHeader::get_ihl(buf[0]);
         let header = IPHeader::from_byte_buffer(&buf[..(ihl * 4) as usize])?;
-        let body = IPBody::from_byte_buffer(header.protocol, &buf[(ihl * 4) as usize..])?;
+        let body = IPBody::from_byte_buffer(&header, &buf[(ihl * 4) as usize..])?;
         Ok(Self { header, body })
     }
     pub fn to_byte_buffer(&self) -> Vec<u8> {
@@ -170,7 +170,7 @@ impl IPHeader {
         if let Some(options) = &self.options {
             buf.append(&mut options.clone());
             if options.len() % 4 != 0 {
-                buf.append(&mut vec![0x0; 4 - options.len() % 4]);
+                buf.append(&mut vec![0u8; 4 - options.len() % 4]);
             }
         }
         buf

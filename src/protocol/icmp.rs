@@ -1,4 +1,4 @@
-use crate::checksum;
+use crate::checksum::ones_complement_sum_byte_buffer;
 use crate::ip::{IPPacketError, IPPacketErrorKind};
 
 #[derive(Debug, Clone)]
@@ -10,19 +10,19 @@ pub struct ICMP {
 }
 impl ICMP {
     pub fn new(_type: u8, code: u8, body: ICMPBody) -> Self {
-        let mut icmp = ICMP {
+        let mut icmp = Self {
             _type,
             code,
             checksum: 0x0,
             body,
         };
-        let checksum = !checksum::ones_complement_sum_byte_buffer(&icmp.to_byte_buffer());
+        let checksum = !ones_complement_sum_byte_buffer(&icmp.to_byte_buffer());
         icmp.checksum = checksum;
         icmp
     }
     pub fn from_byte_buffer(buf: &[u8]) -> Result<Self, IPPacketError> {
         // Check checksum
-        if checksum::ones_complement_sum_byte_buffer(buf) != 0xFFFF {
+        if ones_complement_sum_byte_buffer(buf) != 0xFFFF {
             return Err(IPPacketError::new(IPPacketErrorKind::ICMPChecksumError));
         }
         let _type = buf[0];
