@@ -23,7 +23,6 @@ impl TCP {
         source_address: &Ipv4Addr,
         destination_address: &Ipv4Addr,
         protocol: u8,
-        ihl: u8,
         source_port: u16,
         destination_port: u16,
         sequence_number: u32,
@@ -35,13 +34,11 @@ impl TCP {
         options: Option<Vec<u8>>,
         data: Vec<u8>,
     ) -> Self {
-        let data_offset: u8 = ihl
-            + 5
-            + if let Some(option) = &options {
-                option.len() as u8 % 4 + if option.len() % 4 == 0 { 0 } else { 1 }
-            } else {
-                0
-            };
+        let data_offset: u8 = 5 + if let Some(option) = &options {
+            option.len() as u8 / 4 + if option.len() % 4 == 0 { 0 } else { 1 }
+        } else {
+            0
+        };
         let mut tcp = Self {
             source_port,
             destination_port,
@@ -93,7 +90,6 @@ impl TCP {
         source_address: &Ipv4Addr,
         destination_address: &Ipv4Addr,
         protocol: u8,
-        ihl: u8, // IP Header Length
     ) -> Result<TCP, IPPacketError> {
         let mut pseudo_header = Self::craft_pseudo_header(
             source_address,
@@ -107,11 +103,11 @@ impl TCP {
         }
         let data_reserved_control_seg = u16::from_be_bytes([buf[12], buf[13]]);
         let data_offset = (data_reserved_control_seg >> 12) as u8;
-        let options = if data_offset - ihl == 5 {
+        let options = if data_offset == 5 {
             // No options
             None
         } else {
-            Some(buf[20..(data_offset - ihl) as usize * 4].to_vec())
+            Some(buf[20..(data_offset) as usize * 4].to_vec())
         };
         Ok(Self {
             source_port: u16::from_be_bytes([buf[0], buf[1]]),
@@ -125,7 +121,7 @@ impl TCP {
             checksum: u16::from_be_bytes([buf[16], buf[17]]),
             urgent_pointer: u16::from_be_bytes([buf[18], buf[19]]),
             options,
-            data: buf[(data_offset - ihl) as usize * 4..].to_vec(),
+            data: buf[(data_offset) as usize * 4..].to_vec(),
         })
     }
     fn craft_pseudo_header(
@@ -198,9 +194,11 @@ mod tests {
         let source_address = Ipv4Addr::new(192, 168, 0, 1);
         let destination_address = Ipv4Addr::new(192, 168, 0, 2);
         let protocol = 6;
-        let tcp = TCP::from_byte_buffer(&buf, &source_address, &destination_address, protocol, 5)
-            .unwrap();
-        assert!(tcp.options.is_none());
+        let tcp =
+            TCP::from_byte_buffer(&buf, &source_address, &destination_address, protocol).unwrap();
+        assert!(tcp.options.is_some());
+        assert_eq!(tcp.options.clone().unwrap().len(), 5 * 4);
+        assert!(tcp.data.is_empty());
         assert_eq!(buf.to_vec(), tcp.to_byte_buffer());
         assert_eq!(buf.len(), tcp.len());
     }

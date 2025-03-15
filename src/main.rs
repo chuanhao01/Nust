@@ -56,7 +56,6 @@ fn main() -> io::Result<()> {
                                 &header.destination_addr,
                                 &header.source_addr,
                                 header.protocol,
-                                header.ihl,
                                 tcp.destination_port,
                                 tcp.source_port,
                                 0,

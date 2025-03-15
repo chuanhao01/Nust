@@ -20,7 +20,6 @@ impl IPBody {
                 &ip_header.source_addr,
                 &ip_header.destination_addr,
                 ip_header.protocol,
-                ip_header.ihl,
             )?)),
             _ => Err(IPPacketError::new(IPPacketErrorKind::NotImplementedYet)),
         }
