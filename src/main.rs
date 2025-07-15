@@ -82,6 +82,14 @@ fn main() -> io::Result<()> {
                             );
                             Some(IPPacket::new(ip_header, ip_body))
                         }
+                        // ACK
+                        0b10000 => {
+                            println!(
+                                "TCP ACK: <SEQ={}><ACK={}>",
+                                tcp.sequence_number, tcp.acknowledgment_number
+                            );
+                            None
+                        }
                         _ => {
                             // Not implemented yet, so ignore the request
                             None
@@ -95,7 +103,7 @@ fn main() -> io::Result<()> {
                 if let Some(reply_ip_packet) = reply_ip_packet {
                     let mut res_buf: Vec<u8> = vec![0x0, 0x0, 0x8, 0x0];
                     res_buf.append(&mut reply_ip_packet.to_byte_buffer());
-                    println!("original: {:x?}", &buf[4..]);
+                    println!("original: {:x?}", &buf[4..bytes_copied_to_buffer]);
                     println!("reply: {:x?}", res_buf);
                     iface.send(&res_buf)?;
                 }

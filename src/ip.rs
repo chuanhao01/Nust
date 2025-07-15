@@ -1,5 +1,4 @@
-use core::time;
-use std::{net::Ipv4Addr, option};
+use std::net::Ipv4Addr;
 
 use crate::{checksum, protocol::IPBody};
 
